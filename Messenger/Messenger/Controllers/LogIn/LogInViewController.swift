@@ -53,7 +53,7 @@ class LogInViewController: UIViewController {
         return field
     }()
     
-    private let loginButtonL: UIButton = {
+    private let loginButton: UIButton = {
         let button = UIButton()
         button.setTitle("Log In", for: .normal)
         button.backgroundColor = #colorLiteral(red: 0, green: 0.637983311, blue: 1, alpha: 1)
@@ -78,13 +78,23 @@ class LogInViewController: UIViewController {
         registerButton.tintColor = #colorLiteral(red: 0, green: 0.637983311, blue: 1, alpha: 1)
         navigationItem.rightBarButtonItem = registerButton
         
+//        navigationItem.rightBarButtonItem = UIBarButtonItem(
+//            title: "Register",
+//            style: .done,
+//            target: self,
+//            action: #selector(didTapRegister)
+//      )
+        loginButton.addTarget(self, action: #selector(loginButtonPressed), for: .touchUpInside)
+        
+        emailField.delegate = self
+        passwordField.delegate = self
         
     // MARK: Add subviews
         view.addSubview(scrollView)
         scrollView.addSubview(imageView)
         scrollView.addSubview(emailField)
         scrollView.addSubview(passwordField)
-        scrollView.addSubview(loginButtonL)
+        scrollView.addSubview(loginButton)
     }
     
     override func viewDidLayoutSubviews() {
@@ -109,7 +119,7 @@ class LogInViewController: UIViewController {
             width: scrollView.width-60,
             height: 52
         )
-        loginButtonL.frame = CGRect(
+        loginButton.frame = CGRect(
             x: 30,
             y: passwordField.bottom+10,
             width: scrollView.width-60,
@@ -118,10 +128,40 @@ class LogInViewController: UIViewController {
         
     }
     
+    @objc private func loginButtonPressed() {
+        emailField.resignFirstResponder()
+        passwordField.resignFirstResponder()
+        
+        guard let email = emailField.text, let password = passwordField.text, !email.isEmpty, !password.isEmpty, password.count >= 6 else {
+            alertUserLoginError()
+            return
+        }
+        // MARK: Fierbase login
+    }
+    
+    func alertUserLoginError() {
+        let alert = UIAlertController(title: "Woops", message: "Please enter all information to log in.", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "Dismiss", style: .cancel, handler: nil))
+        present(alert, animated: true)
+    }
+    
     @objc private func didTapRegister() {
         let registerVC = RegisterViewController()
         registerVC.title = "Create Account"
         navigationController?.pushViewController(registerVC, animated: true)
     }
     
+}
+
+extension LogInViewController: UITextFieldDelegate {
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        if textField == emailField {
+            passwordField.becomeFirstResponder()
+        }
+        else if textField == passwordField {
+            loginButtonPressed()
+        }
+   return true
+    }
 }
