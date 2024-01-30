@@ -6,8 +6,10 @@
 //
 
 import UIKit
+import PhotosUI
 
-class RegisterViewController: UIViewController {
+
+class RegisterViewController: UIViewController  {
     
     private let scrollView: UIScrollView = {
         let scrollView = UIScrollView()
@@ -20,6 +22,9 @@ class RegisterViewController: UIViewController {
         imageView.image = UIImage(systemName: "person.fill.questionmark.rtl")
         imageView.tintColor = .gray
         imageView.contentMode = .scaleAspectFit
+        imageView.layer.masksToBounds = true
+        imageView.layer.borderWidth = 2
+        imageView.layer.borderColor = #colorLiteral(red: 0, green: 0.3285208941, blue: 0.5748849511, alpha: 0.5718042235).cgColor
         return imageView
     }()
     
@@ -136,13 +141,13 @@ class RegisterViewController: UIViewController {
         imageView.isUserInteractionEnabled = true
         scrollView.isUserInteractionEnabled = true
         
-        let gesture = UIGestureRecognizer(target: self, action: #selector(didTapChangeProfilePic))
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(didTapChangeProfilePic))
         
-        imageView.addGestureRecognizer(gesture)
+        imageView.addGestureRecognizer(tapGesture)
     }
     
     @objc func didTapChangeProfilePic() {
-        
+        presentPhotoActionSheet()
     }
     /*
      Функция viewDidLayoutSubviews в UIViewController вызывается после того, как иерархия представлений (view hierarchy) была обновлена. Это происходит, например, когда изменяется размер экрана или при первом появлении контроллера на экране. Именно в этот момент вы можете уверенно настраивать расположение и размеры элементов на экране.
@@ -188,6 +193,8 @@ class RegisterViewController: UIViewController {
             width: size,
             height: size
         )
+        imageView.layer.cornerRadius = imageView.width/2.0
+        
         firstNameField.frame = CGRect(
             x: 30,
             y: imageView.bottom+10,
@@ -253,6 +260,22 @@ class RegisterViewController: UIViewController {
         registerVC.title = "Create Account"
         navigationController?.pushViewController(registerVC, animated: true)
     }
+    func presentPhotoPicker() {
+        if #available(iOS 14, *) {
+            var configuration = PHPickerConfiguration()
+            configuration.selectionLimit = 1
+            let picker = PHPickerViewController(configuration: configuration)
+            picker.delegate = self
+            
+            present(picker, animated: true)
+        } else {
+            let vc = UIImagePickerController()
+            vc.sourceType = .photoLibrary
+            vc.delegate = self
+            vc.allowsEditing = true
+            present(vc, animated: true)
+        }
+    }
     
 }
 
@@ -266,5 +289,78 @@ extension RegisterViewController: UITextFieldDelegate {
             registerButtonPressed()
         }
    return true
+    }
+}
+
+// MARK: Image picker extension with UIImagePickerControllerDelegate
+extension RegisterViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+    
+    func presentPhotoActionSheet() {
+        let actionSheet = UIAlertController(
+            title: "Profile Picture",
+            message: "How would you like to select a picture?",
+            preferredStyle: .actionSheet
+        )
+        actionSheet.addAction(UIAlertAction(
+            title: "Cancel",
+            style: .cancel,
+            handler: nil))
+        
+        actionSheet.addAction(UIAlertAction(
+            title: "Take photo",
+            style: .default,
+            handler: { [weak self] _ in
+                self?.presentCamera()
+            }))
+        actionSheet.addAction(UIAlertAction(
+            title: "Choose photo",
+            style: .default,
+            handler: {[weak self] _ in
+                self?.presentPhotoPicker()
+            }))
+        
+        present(actionSheet, animated: true)
+    }
+    
+    func presentCamera() {
+        let vc = UIImagePickerController()
+        vc.sourceType = .camera
+        vc.delegate = self
+        vc.allowsEditing = true
+        present(vc, animated: true)
+    }
+    
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+        picker.dismiss(animated: true)
+        print(info)
+        
+        guard let selectedImage = info[UIImagePickerController.InfoKey.editedImage] as? UIImage else { return }
+        
+        self.imageView.image = selectedImage
+    }
+    func imagePickerControllerDidCancel(_ picker: UIImagePickerController){
+        picker.dismiss(animated: true)
+    }
+}
+// MARK: Image picker extension with PHPickerViewControllerDelegate
+@available(iOS 14.0, *)
+extension RegisterViewController: PHPickerViewControllerDelegate {
+    func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+        picker.dismiss(animated: true)
+        if let itemprovider = results.first?.itemProvider{
+            
+            if itemprovider.canLoadObject(ofClass: UIImage.self){
+                itemprovider.loadObject(ofClass: UIImage.self) { image , error  in
+                    if let error{
+                        print(error)
+                    }
+                    if let selectedImage = image as? UIImage{
+                        DispatchQueue.main.async {
+                            self.imageView.image = selectedImage
+                        }
+                    }
+                }
+            }
+        }
     }
 }
